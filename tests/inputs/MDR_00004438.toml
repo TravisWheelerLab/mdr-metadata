@@ -1,0 +1,51 @@
+additional_files = [ ]
+ligands = [ ]
+solvents = [ ]
+papers = [ ]
+contributors = [ ]
+simulation_permissions = [ ]
+
+[initial]
+short_description = "Adaptive sampling of AncFT luciferase"
+description = "Adaptive sampling of AncFT luciferase performed in HTMD, using a C-alpha RMSD metric. 5 microseconds in total. 10 epochs of 10 parallel simulations each."
+date = "2025-04-24"
+lead_contributor_orcid = "0000-0001-7119-121X"
+external_link = ""
+commands = ""
+simulation_is_restricted = false
+
+[software]
+name = "AMBER"
+version = ""
+
+[required_files]
+trajectory_file_name = "output.filtered.xtc"
+structure_file_name = "filtered.pdb"
+topology_file_name = "structure.prmtop"
+
+[replicates]
+replicate = 1
+total_replicates = 100
+
+[water]
+is_present = false
+model = "TIP3P"
+density = nan
+water_density_units = "g/m^3"
+
+[[proteins]]
+molecule_id_type = "PDB"
+molecule_id = "7QXR "
+
+[forcefield]
+forcefield = ""
+forcefield_comments = ""
+
+[temperature]
+temperature = 310
+
+[protonation_method]
+protonation_method = ""
+
+[timestep_information]
+integration_time_step = 2
