@@ -1,5 +1,6 @@
 use anyhow::Result;
 use clap::Parser;
+use libmdrmeta::Meta;
 use std::{
     fs::File,
     io::{self, Write},
@@ -67,20 +68,29 @@ fn main() {
 fn run(args: Cli) -> Result<()> {
     match &args.command {
         Some(Command::ToJson(args)) => {
-            //let mut out_file: Box<dyn Write> = match args.outfile.as_str() {
-            //    "-" => Box::new(io::stdout()),
-            //    out_name => Box::new(File::create(out_name)?),
-            //};
             let mut out_file = open_outfile(&args.outfile)?;
-            let json = libmdrmeta::to_json(&args.filename)?;
-            writeln!(out_file, "{json}")?;
+            let meta = Meta::from_file(&args.filename)?;
+            write!(out_file, "{}", meta.to_json()?)?;
         }
         Some(Command::ToToml(args)) => {
             let mut out_file = open_outfile(&args.outfile)?;
-            let toml = libmdrmeta::to_toml(&args.filename)?;
-            writeln!(out_file, "{toml}")?;
+            let meta = Meta::from_file(&args.filename)?;
+            write!(out_file, "{}", meta.to_toml()?)?;
         }
-        Some(Command::Validate(args)) => libmdrmeta::validate(&args.filename)?,
+        Some(Command::Validate(args)) => {
+            let meta = Meta::from_file(&args.filename)?;
+            let errors = meta.find_errors();
+            if errors.is_empty() {
+                println!("No errors");
+            } else {
+                let num_errors = errors.len();
+                println!(
+                    "Found {num_errors} error{}:\n{}",
+                    if num_errors == 1 { "" } else { "s" },
+                    errors.join("\n")
+                );
+            }
+        }
         _ => unreachable!(),
     };
 

@@ -1,0 +1,61 @@
+{
+  "initial": {
+    "description": "Rhodopsin (apoform). Classical unbiased (NVT ensemble) sodium allosteric binding assay. 3 replicates accumulate to 1.5 µs of trajectory. The time step is 4.0 fs and the saving frequency is 0.2 ns.",
+    "external_link": "https://www.gpcrmd.org/dynadb/dynamics/id/12",
+    "lead_contributor_orcid": "0000-0000-0000-0000",
+    "date": "2020-07-13",
+    "commands": ""
+  },
+  "software": {
+    "name": "ACEMD",
+    "version": "GPUGRID"
+  },
+  "proteins": [
+    {
+      "molecule_id_type": "PDB",
+      "molecule_id": "1U19.A"
+    }
+  ],
+  "replicates": {
+    "total_replicates": 3,
+    "replicate": 2
+  },
+  "water": {
+    "is_present": true
+  },
+  "solvents": [
+    {
+      "name": "Sodium",
+      "ion_concentration": 0.165
+    },
+    {
+      "name": "Chloride",
+      "ion_concentration": 0.158
+    }
+  ],
+  "papers": [
+    {
+      "title": "GPCRmd uncovers the dynamics of the 3D-GPCRome",
+      "authors": "Rodríguez-Espigares, I., Torrens-Fontanals, M., Tiemann, J.K.S. et al.",
+      "journal": "Nat Methods",
+      "volume": "17",
+      "number": "1",
+      "year": 2020,
+      "pages": "777–787"
+    },
+    {
+      "title": "The Retinal Conformation and its Environment in Rhodopsin in Light of a New 2.2 Å Crystal Structure",
+      "authors": "Okada, T., Sugihara, M., Bondar, A., Elstner, M., Entel, P., Buss, V.",
+      "journal": "Journal of Molecular Biology",
+      "volume": "342",
+      "number": "2",
+      "year": 2004,
+      "pages": "571-583"
+    }
+  ],
+  "contributors": [
+    {
+      "name": "GPCRmd community"
+    }
+  ]
+}
