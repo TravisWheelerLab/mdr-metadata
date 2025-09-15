@@ -1,6 +1,6 @@
-# MDRepo TOML parser/validator
+# MDRepo Metadata TOML
 
-More to come.
+Split into `libmdrtoml` to make Python bindings and `mdrtoml` for binary.
 
 ## Author
 

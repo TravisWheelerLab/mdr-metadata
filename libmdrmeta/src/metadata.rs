@@ -1,6 +1,6 @@
-use anyhow::Result;
+use anyhow::{bail, Result};
 use serde::{Deserialize, Serialize};
-use std::fs;
+use std::{fs, path::Path};
 use toml::value::Value as TomlValue;
 
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
@@ -69,12 +69,29 @@ pub struct Meta {
     pub simulation_permissions: Option<Vec<Permission>>,
 }
 
+// --------------------------------------------------
 impl Meta {
+    pub fn from_toml(toml: &str) -> Result<Self> {
+        let mut meta: Meta = toml::from_str(toml)?;
+        meta.fix();
+        Ok(meta)
+    }
+
+    pub fn from_json(json: &str) -> Result<Self> {
+        let mut meta: Meta = serde_json::from_str(&json)?;
+        meta.fix();
+        Ok(meta)
+    }
+
     pub fn from_file(filename: &str) -> Result<Self> {
+        let ext = Path::new(filename).extension().expect("No file extension");
         let contents = fs::read_to_string(filename)?;
-        let mut toml: Meta = toml::from_str(&contents)?;
-        toml.fix();
-        Ok(toml)
+        let meta = match ext.to_str() {
+            Some("json") => Self::from_json(&contents)?,
+            Some("toml") => Self::from_toml(&contents)?,
+            _ => bail!(r#"Unknown file extension "{}""#, ext.display()),
+        };
+        Ok(meta)
     }
 
     pub fn fix(&mut self) {
@@ -352,8 +369,8 @@ pub struct Water {
 
 #[cfg(test)]
 mod tests {
-    const INPUT1: &str = "tests/inputs/MDR_00000002.toml";
-    const INPUT2: &str = "tests/inputs/MDR_00004423.toml";
+    const INPUT1: &str = "../inputs/MDR_00000002.toml";
+    const INPUT2: &str = "../inputs/MDR_00004423.toml";
     use super::{Datelike, Ligand, Meta, Protein};
     use anyhow::Result;
     use std::fs;

@@ -1,0 +1,15 @@
+[package]
+name = "mdr-meta"
+version = "0.1.0"
+edition = "2024"
+description = "MDRepo metadata TOML"
+license = "BSD-3-Clause"
+repository = "https://github.com/TravisWheelerLab/mdr-metadata"
+authors = [
+    "Ken Youens-Clark <kyclark@arizona.edu>"
+]
+
+[dependencies]
+anyhow = "1.0.98"
+clap = { version = "4.5.44", features = ["derive"] }
+libmdrmeta = { path = "../libmdrmeta", version = "0.1.0" }
