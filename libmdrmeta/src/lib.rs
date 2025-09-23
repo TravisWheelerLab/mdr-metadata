@@ -72,18 +72,21 @@ pub struct Meta {
 
 // --------------------------------------------------
 impl Meta {
+    //[pyfunction]
     pub fn from_toml(toml: &str) -> Result<Self> {
         let mut meta: Meta = toml::from_str(toml)?;
         meta.fix();
         Ok(meta)
     }
 
+    //[pyfunction]
     pub fn from_json(json: &str) -> Result<Self> {
         let mut meta: Meta = serde_json::from_str(&json)?;
         meta.fix();
         Ok(meta)
     }
 
+    //[pyfunction]
     pub fn from_str(contents: &str) -> Result<Self> {
         let meta = if contents.starts_with("{") {
             Self::from_json(&contents)?
@@ -93,10 +96,14 @@ impl Meta {
         Ok(meta)
     }
 
+    //[pyfunction]
     pub fn from_file(filename: &str) -> Result<Self> {
         match Path::new(filename).extension() {
             Some(ext) => {
                 let contents = fs::read_to_string(filename)?;
+                if contents.is_empty() {
+                    bail!("File is empty")
+                }
                 let meta = match ext.to_str() {
                     Some("json") => Self::from_json(&contents)?,
                     Some("toml") => Self::from_toml(&contents)?,
@@ -108,15 +115,56 @@ impl Meta {
         }
     }
 
+    //[pyfunction]
     pub fn to_json(self: &Self) -> Result<String> {
         serde_json::to_string_pretty(&self).map_err(Into::into)
     }
 
+    //[pyfunction]
     pub fn to_toml(self: &Self) -> Result<String> {
         toml::to_string_pretty(&self).map_err(Into::into)
     }
 
-    pub fn fix(&mut self) {
+    //[pyfunction]
+    pub fn find_errors(&self) -> Vec<(String, String)> {
+        let mut errors = vec![];
+        if let Some(water) = &self.water {
+            if let Some(density) = water.density {
+                if density.is_nan() {
+                    errors.push((
+                        "water.density".to_string(),
+                        "cannot be NaN".to_string(),
+                    ));
+                }
+            }
+            if !water.is_present {
+                if water.model.is_some() {
+                    errors.push((
+                        "water.model".to_string(),
+                        "should not be present if water.is_present is false"
+                            .to_string(),
+                    ));
+                }
+                if water.density.is_some() {
+                    errors.push((
+                        "water.density".to_string(),
+                        "should not be present if water.is_present is false"
+                            .to_string(),
+                    ));
+                }
+                if water.water_density_units.is_some() {
+                    errors.push((
+                        "water.water_density_units".to_string(),
+                        "should not be present if water.is_present is false"
+                            .to_string(),
+                    ));
+                }
+            }
+        }
+        errors
+    }
+
+    fn fix(&mut self) {
         // Some confusion over dates as quoted strings or unquoted TOML values
         // But there's no JSON "date" format
         if let Datelike::TomlDate(dt) = self.initial.date {
@@ -196,39 +244,6 @@ impl Meta {
 
             self.proteins = Some(new_proteins);
         }
-    }
-
-    pub fn find_errors(&self) -> Vec<String> {
-        let mut errors = vec![];
-        if let Some(water) = &self.water {
-            if let Some(density) = water.density {
-                if density.is_nan() {
-                    errors.push("water.density cannot be NaN".to_string());
-                }
-            }
-            if !water.is_present {
-                if water.model.is_some() {
-                    errors.push(
-                        "water.model should not be present if water.is_present is false"
-                            .to_string(),
-                    );
-                }
-                if water.density.is_some() {
-                    errors.push(
-                        "water.density should not be present if water.is_present is false"
-                            .to_string(),
-                    );
-                }
-                if water.water_density_units.is_some() {
-                    errors.push(
-                        "water.water_density_units should not be present \
-                        if water.is_present is false"
-                            .to_string(),
-                    );
-                }
-            }
-        }
-        errors
     }
 }
 
@@ -388,3 +403,9 @@ pub struct Water {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub water_density_units: Option<String>,
 }
+
+//#[derive(Debug, Serialize)]
+//pub struct Error {
+//    field: String,
+//    error: String,
+//}

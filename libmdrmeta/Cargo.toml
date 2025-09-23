@@ -9,6 +9,15 @@ authors = [
     "Ken Youens-Clark <kyclark@arizona.edu>"
 ]
 
+#[lib]
+#name = "libmdrmeta"
+## "cdylib" is necessary to produce a shared library for Python to import from.
+#crate-type = ["cdylib"]
+
+#[dependencies.pyo3]
+#version = "0.24.0"
+#features = ["abi3-py38"]
+
 [dependencies]
 anyhow = "1.0.98"
 serde = { version = "1.0.219", features = ["derive"] }

@@ -1,6 +1,8 @@
-use anyhow::Result;
+use anyhow::{bail, Result};
 use clap::Parser;
 use libmdrmeta::Meta;
+use multimap::MultiMap;
+//use serde::{Deserialize, Serialize};
 use std::{
     fs::File,
     io::{self, Write},
@@ -19,11 +21,11 @@ pub enum Command {
     /// Print metadata in JSON format
     ToJson(ToJsonArgs),
 
-    /// Print metadata in JSON format
+    /// Print metadata in TOML format
     ToToml(ToTomlArgs),
 
-    /// Validate metadata file
-    Validate(ValidateArgs),
+    /// Check metadata file for errors
+    Check(CheckArgs),
 }
 
 #[derive(Debug, Parser)]
@@ -49,11 +51,15 @@ pub struct ToTomlArgs {
 }
 
 #[derive(Debug, Parser)]
-/// Validate MDRepo metadata TOML
-pub struct ValidateArgs {
+/// Check MDRepo metadata TOML
+pub struct CheckArgs {
     /// Input filename
     #[arg(value_name = "FILE")]
     filename: String,
+
+    /// JSON output
+    #[arg(short, long)]
+    json: bool,
 }
 
 // --------------------------------------------------
@@ -77,20 +83,37 @@ fn run(args: Cli) -> Result<()> {
             let meta = Meta::from_file(&args.filename)?;
             write!(out_file, "{}", meta.to_toml()?)?;
         }
-        Some(Command::Validate(args)) => {
-            let meta = Meta::from_file(&args.filename)?;
-            let errors = meta.find_errors();
-            if errors.is_empty() {
-                println!("No errors");
-            } else {
-                let num_errors = errors.len();
-                println!(
-                    "Found {num_errors} error{}:\n{}",
-                    if num_errors == 1 { "" } else { "s" },
-                    errors.join("\n")
-                );
+        Some(Command::Check(args)) => match Meta::from_file(&args.filename) {
+            Ok(meta) => {
+                let errors = meta.find_errors();
+                if errors.is_empty() {
+                    println!("No errors");
+                } else {
+                    if args.json {
+                        let mut json_errors = MultiMap::new();
+                        for (field, msg) in &errors {
+                            json_errors.insert(field, msg)
+                        }
+                        println!(
+                            "{}",
+                            serde_json::to_string_pretty(&json_errors).unwrap()
+                        )
+                    } else {
+                        let num_errors = errors.len();
+                        println!(
+                            "Found {num_errors} error{}:\n{}",
+                            if num_errors == 1 { "" } else { "s" },
+                            errors
+                                .iter()
+                                .map(|(fld, msg)| format!("{fld}: {msg}"))
+                                .collect::<Vec<String>>()
+                                .join("\n")
+                        );
+                    };
+                }
             }
-        }
+            Err(e) => bail!(r#"Failed to parse "{}": {e}"#, args.filename),
+        },
         _ => unreachable!(),
     };
 
