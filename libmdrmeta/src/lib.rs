@@ -1,4 +1,5 @@
 use anyhow::{bail, Result};
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::{fs, path::Path};
 use toml::value::Value as TomlValue;
@@ -128,14 +129,76 @@ impl Meta {
     //[pyfunction]
     pub fn find_errors(&self) -> Vec<(String, String)> {
         let mut errors = vec![];
+        if let Some(temp) = &self.temperature.clone().and_then(|t| t.temperature) {
+            if !(273..=5000).contains(temp) {
+                errors.push((
+                    "temperature.temperature".to_string(),
+                    format!(r#""{temp}" must be in the range 273-5000"#),
+                ))
+            }
+        }
+
+        let valid_date = Regex::new(r"\d{4}\-\d{2}\-\d{2}").unwrap();
+        match &self.initial.date {
+            Datelike::Stringy(dt) => {
+                if !valid_date.is_match(&dt) {
+                    errors.push((
+                        "initial.date".to_string(),
+                        format!(r#"invalid date "{}""#, dt),
+                    ));
+                }
+            }
+            _ => {
+                errors.push(("initial.date".to_string(), "invalid date".to_string()));
+            }
+        }
+
+        fn is_valid_orcid(orcid: &str) -> bool {
+            let re = Regex::new(r"\d{4}\-\d{4}\-\d{4}\-\d{3}[A-Z]").unwrap();
+            re.is_match(orcid)
+        }
+
+        if !is_valid_orcid(&self.initial.lead_contributor_orcid) {
+            errors.push((
+                "initial.lead_contributor_orcid".to_string(),
+                format!(r#"invalid ORCID "{}""#, self.initial.lead_contributor_orcid),
+            ));
+        }
+
+        if let Some(contributors) = &self.contributors {
+            for contributor in contributors {
+                if let Some(orcid) = &contributor.orcid {
+                    if !is_valid_orcid(&orcid) {
+                        errors.push((
+                            "contributor.orcid".to_string(),
+                            format!(r#"invalid ORCID "{}""#, orcid),
+                        ));
+                    }
+                }
+            }
+        }
+
+        if let Some(perms) = &self.simulation_permissions {
+            for perm in perms {
+                if !is_valid_orcid(&perm.user_orcid) {
+                    errors.push((
+                        "simulation_permissions.user_orcid".to_string(),
+                        format!(r#"invalid ORCID "{}""#, perm.user_orcid),
+                    ));
+                }
+            }
+        }
+
         if let Some(water) = &self.water {
-            if let Some(density) = water.density
-                && density.is_nan() {
+            if let Some(density) = water.density {
+                if density.is_nan() {
                     errors.push((
                         "water.density".to_string(),
                         "cannot be NaN".to_string(),
                     ));
                 }
+            }
+
             if !water.is_present {
                 if water.model.is_some() {
                     errors.push((
@@ -187,7 +250,6 @@ impl Meta {
 
                     let number = paper.number.clone().map(|val| {
                         if let Numlike::TomlVal(n) = val {
-                            
                             match n {
                                 TomlValue::String(v) => Numlike::Stringy(v.to_string()),
                                 TomlValue::Integer(v) => {
@@ -244,6 +306,156 @@ impl Meta {
             self.proteins = Some(new_proteins);
         }
     }
+
+    pub fn example() -> Meta {
+        Meta {
+            initial: Initial {
+                short_description: Some("Adaptive sampling of AncFT luciferase".to_string()),
+                description: Some("Adaptive sampling of AncFT luciferase performed in \
+                    HTMD, using a C-alpha RMSD metric. 5 microseconds in total. 10 \
+                    epochs of 10 parallel simulations each.".to_string()),
+                external_link: Some("http://external.link".to_string()),
+                lead_contributor_orcid: "0000-0000-0000-000X".to_string(),
+                date: Datelike::Stringy("2000-01-01".to_string()),
+                commands: Some("gmx_mpi mdrun -s fname.tpr -deffnm fname -v -c fname.pdb \
+                    -cpi fname.cpt -maxh clock_time -noappend -update gpu -bonded gpu \
+                    -pme gpu -pmefft gpu -nb gpu".to_string()),
+                simulation_is_restricted: Some(false)
+            },
+            required_files: Some(
+                RequiredFile {
+                    trajectory_file_name: "trajectory.xtc".to_string(),
+                    structure_file_name: "structure.pdb".to_string(),
+                    topology_file_name: "topology.psf".to_string(),
+                }),
+            additional_files: Some(vec![
+                AdditionalFile {
+                    additional_file_type: "Checkpoint".to_string(),
+                    additional_file_name: "abc.cpt".to_string(),
+                    description: Some("Last GROMACS checkpoint of the simulation".to_string()),
+                },
+                AdditionalFile {
+                    additional_file_type: "Miscellaneous".to_string(),
+                    additional_file_name: "xyz.tpr".to_string(),
+                    description: None,
+                }
+            ]),
+            contributors: Some(vec![
+                Contributor {
+                    name: "Contributor1".to_string(),
+                    orcid: Some("0000-0000-0000-000X".to_string()),
+                    email: Some("email@place.edu".to_string()),
+                    institution: Some("Institution".to_string()),
+                },
+                Contributor {
+                    name: "Contributor2".to_string(),
+                    orcid: Some("0000-0000-0000-000X".to_string()),
+                    email: Some("email@anotherplace.edu".to_string()),
+                    institution: Some("Some Other Institution".to_string()),
+                }
+            ]),
+            forcefield: Some(
+                Forcefield {
+                    forcefield: Some("Amber99SB-ILDN".to_string()),
+                    forcefield_comments: Some("ligand params: GAFF".to_string()),
+                }
+            ),
+            ligands: Some(vec![
+                Ligand {
+                    name: "Foropafant".to_string(),
+                    smiles: "CC(C)C1=CC(=C(C(=C1)C(C)C)C2=CSC(=N2)N(CCN(C)C)CC3=CN=CC=C3)C(C)C".to_string(),
+                },
+                Ligand {
+                    name: "Vipadenant".to_string(),
+                    smiles: "CC1=C(C=CC(=C1)CN2C3=NC(=NC(=C3N=N2)C4=CC=CO4)N)N".to_string(),
+                }
+            ]),
+            mdrepo_id: None,
+            papers: Some(vec![
+                Paper {
+                    title: "GPCRmd uncovers the dynamics of the 3D-GPCRome".to_string(),
+                    authors: "Rodríguez, I., Fontanals, M., Tielmann, J.S. et al.".to_string(),
+                    journal: "Nat Methods".to_string(),
+                    volume: Numlike::Stringy("17".to_string()),
+                    number: Some(Numlike::Stringy("4".to_string())),
+                    year: 2000,
+                    pages: Some("777–787".to_string()),
+                    doi: Some("10.1038/x41594-020-0884-y".to_string())
+                },
+                Paper {
+                    title: "Adrenaline-activated structure of β2-adrenoceptor stabilized by an engineered nanobody".to_string(),
+                    authors: "Ring, A., Manglik, A., Kruse, A., Enos, M., Weis, W., Garcia, K., Kobilka, B.".to_string(),
+                    journal: "Nature".to_string(),
+                    volume: Numlike::Stringy("502".to_string()),
+                    number: Some(Numlike::Stringy("7472".to_string())),
+                    year: 2013,
+                    pages: Some("575-579".to_string()),
+                    doi: Some("10.1038/nature12572".to_string())
+                }
+            ]),
+            proteins: Some(vec![
+                Protein {
+                    molecule_id_type: Some("PDB".to_string()),
+                    molecule_id: Some("7QXR".to_string()),
+                    pdb_id: None,
+                    uniprot_id: None,
+                },
+                Protein {
+                    molecule_id_type: Some("Uniprot".to_string()),
+                    molecule_id: Some("A7M120".to_string()),
+                    pdb_id: None,
+                    uniprot_id: None,
+                }
+            ]),
+            protonation_method: Some(
+                Protonation {
+                    protonation_method: Some("PROPKA".to_string())
+                }),
+            replicates: Some(
+                Replicates {
+                    replicate: Some(1),
+                    total_replicates: Some(10)
+                }),
+            simulation_permissions: Some(vec![
+                Permission {
+                    user_orcid: "0000-0000-0000-000X".to_string(),
+                    can_edit: true,
+                    can_view: false,
+                },
+                Permission {
+                    user_orcid: "0000-0000-0000-001X".to_string(),
+                    can_edit: false,
+                    can_view: true,
+                }
+            ]),
+            software: Software {
+                name: "GROMACS".to_string(),
+                version: Some("2016.5".to_string()),
+            },
+            solvents: Some(vec![
+                Solvent {
+                    name: "Sodium".to_string(),
+                    ion_concentration: 0.157,
+                    concentration_units: Some("mol/L".to_string()),
+                },
+                Solvent {
+                    name: "Chloride".to_string(),
+                    ion_concentration: 0.225,
+                    concentration_units: Some("mol/L".to_string()),
+                }
+            ]),
+            temperature: Some(Temperature { temperature: Some(273) }),
+            timestep_information: Some( Timestep { integration_time_step: Some(2.) }),
+            water: Some(
+                Water {
+                    is_present: true,
+                    model: Some("TIP3P".to_string()),
+                    density: Some(0.986),
+                    water_density_units: Some("g/m^3".to_string()),
+                }
+            )
+        }
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -272,6 +484,7 @@ pub struct Initial {
 pub struct AdditionalFile {
     pub additional_file_type: String,
     pub additional_file_name: String,
+    pub description: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -331,9 +544,12 @@ pub struct Paper {
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub pages: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub doi: Option<String>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Temperature {
     pub temperature: Option<u32>,
 }
@@ -387,6 +603,7 @@ pub struct Protein {
 pub struct Solvent {
     pub name: String,
     pub ion_concentration: f64,
+    pub concentration_units: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -402,9 +619,3 @@ pub struct Water {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub water_density_units: Option<String>,
 }
-
-//#[derive(Debug, Serialize)]
-//pub struct Error {
-//    field: String,
-//    error: String,
-//}

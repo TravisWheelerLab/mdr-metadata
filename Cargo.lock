@@ -243,6 +243,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "pretty_assertions",
+ "regex",
  "serde",
  "serde_json",
  "toml",

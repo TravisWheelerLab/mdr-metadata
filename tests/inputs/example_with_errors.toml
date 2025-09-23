@@ -1,0 +1,116 @@
+[initial]
+short_description = "Adaptive sampling of AncFT luciferase"
+description = "Adaptive sampling of AncFT luciferase performed in HTMD, using a C-alpha RMSD metric. 5 microseconds in total. 10 epochs of 10 parallel simulations each."
+external_link = "http://external.link"
+lead_contributor_orcid = "0000-0000-0000-00X"
+date = "200-100-0"
+commands = "gmx_mpi mdrun -s fname.tpr -deffnm fname -v -c fname.pdb -cpi fname.cpt -maxh clock_time -noappend -update gpu -bonded gpu -pme gpu -pmefft gpu -nb gpu"
+simulation_is_restricted = false
+
+[software]
+name = "GROMACS"
+version = "2016.5"
+
+[required_files]
+trajectory_file_name = "trajectory.xtc"
+structure_file_name = "structure.pdb"
+topology_file_name = "topology.psf"
+
+[[additional_files]]
+additional_file_type = "Checkpoint"
+additional_file_name = "abc.cpt"
+description = "Last GROMACS checkpoint of the simulation"
+
+[[additional_files]]
+additional_file_type = "Miscellaneous"
+additional_file_name = "xyz.tpr"
+
+[[proteins]]
+molecule_id_type = "PDB"
+molecule_id = "7QXR"
+
+[[proteins]]
+molecule_id_type = "Uniprot"
+molecule_id = "A7M120"
+
+[replicates]
+total_replicates = 10
+replicate = 1
+
+[water]
+is_present = true
+model = "TIP3P"
+density = 0.986
+
+[[ligands]]
+name = "Foropafant"
+smiles = "CC(C)C1=CC(=C(C(=C1)C(C)C)C2=CSC(=N2)N(CCN(C)C)CC3=CN=CC=C3)C(C)C"
+
+[[ligands]]
+name = "Vipadenant"
+smiles = "CC1=C(C=CC(=C1)CN2C3=NC(=NC(=C3N=N2)C4=CC=CO4)N)N"
+
+[[solvents]]
+name = "Sodium"
+ion_concentration = 0.157
+concentration_units = "mol/L"
+
+[[solvents]]
+name = "Chloride"
+ion_concentration = 0.225
+concentration_units = "mol/L"
+
+[forcefield]
+forcefield = "Amber99SB-ILDN"
+forcefield_comments = "ligand params: GAFF"
+
+[temperature]
+temperature = 100
+
+[protonation_method]
+protonation_method = "PROPKA"
+
+[timestep_information]
+integration_time_step = 2.0
+
+[[papers]]
+title = "GPCRmd uncovers the dynamics of the 3D-GPCRome"
+authors = "Rodríguez, I., Fontanals, M., Tielmann, J.S. et al."
+journal = "Nat Methods"
+volume = "17"
+number = "4"
+year = 2000
+pages = "777–787"
+doi = "10.1038/x41594-020-0884-y"
+
+[[papers]]
+title = "Adrenaline-activated structure of β2-adrenoceptor stabilized by an engineered nanobody"
+authors = "Ring, A., Manglik, A., Kruse, A., Enos, M., Weis, W., Garcia, K., Kobilka, B."
+journal = "Nature"
+volume = "502"
+number = "7472"
+year = 2013
+pages = "575-579"
+doi = "10.1038/nature12572"
+
+[[contributors]]
+name = "Contributor1"
+orcid = "0000-0000-0000-00AX"
+email = "email@place.edu"
+institution = "Institution"
+
+[[contributors]]
+name = "Contributor2"
+orcid = "0000-0000-0000-0009"
+email = "email@anotherplace.edu"
+institution = "Some Other Institution"
+
+[[simulation_permissions]]
+user_orcid = "A000-0000-0000-000X"
+can_edit = true
+can_view = false
+
+[[simulation_permissions]]
+user_orcid = "0000-0000-0000-001X"
+can_edit = false
+can_view = true
