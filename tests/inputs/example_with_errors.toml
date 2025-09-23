@@ -38,7 +38,7 @@ total_replicates = 10
 replicate = 1
 
 [water]
-is_present = true
+is_present = false
 model = "TIP3P"
 density = 0.986
 

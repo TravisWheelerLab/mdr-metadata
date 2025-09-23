@@ -141,7 +141,7 @@ impl Meta {
         let valid_date = Regex::new(r"\d{4}\-\d{2}\-\d{2}").unwrap();
         match &self.initial.date {
             Datelike::Stringy(dt) => {
-                if !valid_date.is_match(&dt) {
+                if !valid_date.is_match(dt) {
                     errors.push((
                         "initial.date".to_string(),
                         format!(r#"invalid date "{}""#, dt),
@@ -168,7 +168,7 @@ impl Meta {
         if let Some(contributors) = &self.contributors {
             for contributor in contributors {
                 if let Some(orcid) = &contributor.orcid {
-                    if !is_valid_orcid(&orcid) {
+                    if !is_valid_orcid(orcid) {
                         errors.push((
                             "contributor.orcid".to_string(),
                             format!(r#"invalid ORCID "{}""#, orcid),
@@ -459,6 +459,7 @@ impl Meta {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct Initial {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub short_description: Option<String>,
@@ -481,6 +482,7 @@ pub struct Initial {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct AdditionalFile {
     pub additional_file_type: String,
     pub additional_file_name: String,
@@ -488,6 +490,7 @@ pub struct AdditionalFile {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct Contributor {
     pub name: String,
 
@@ -502,6 +505,7 @@ pub struct Contributor {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct Forcefield {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub forcefield: Option<String>,
@@ -511,6 +515,7 @@ pub struct Forcefield {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct Permission {
     pub user_orcid: String,
     pub can_edit: bool,
@@ -518,16 +523,19 @@ pub struct Permission {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct Protonation {
     pub protonation_method: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct Timestep {
     pub integration_time_step: Option<f64>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct Paper {
     pub title: String,
 
@@ -550,17 +558,20 @@ pub struct Paper {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct Temperature {
     pub temperature: Option<u32>,
 }
 
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
+#[serde(deny_unknown_fields)]
 pub struct Ligand {
     pub name: String,
     pub smiles: String,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct RequiredFile {
     pub trajectory_file_name: String,
     pub structure_file_name: String,
@@ -568,6 +579,7 @@ pub struct RequiredFile {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct Software {
     pub name: String,
 
@@ -576,6 +588,7 @@ pub struct Software {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct Replicates {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub total_replicates: Option<u32>,
@@ -585,6 +598,7 @@ pub struct Replicates {
 }
 
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
+#[serde(deny_unknown_fields)]
 pub struct Protein {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub molecule_id_type: Option<String>,
@@ -600,6 +614,7 @@ pub struct Protein {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct Solvent {
     pub name: String,
     pub ion_concentration: f64,
@@ -607,6 +622,7 @@ pub struct Solvent {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct Water {
     pub is_present: bool,
 
