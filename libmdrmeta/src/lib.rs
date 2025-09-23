@@ -81,17 +81,17 @@ impl Meta {
 
     //[pyfunction]
     pub fn from_json(json: &str) -> Result<Self> {
-        let mut meta: Meta = serde_json::from_str(&json)?;
+        let mut meta: Meta = serde_json::from_str(json)?;
         meta.fix();
         Ok(meta)
     }
 
     //[pyfunction]
-    pub fn from_str(contents: &str) -> Result<Self> {
+    pub fn from_string(contents: &str) -> Result<Self> {
         let meta = if contents.starts_with("{") {
-            Self::from_json(&contents)?
+            Self::from_json(contents)?
         } else {
-            Self::from_toml(&contents)?
+            Self::from_toml(contents)?
         };
         Ok(meta)
     }
@@ -116,12 +116,12 @@ impl Meta {
     }
 
     //[pyfunction]
-    pub fn to_json(self: &Self) -> Result<String> {
+    pub fn to_json(&self) -> Result<String> {
         serde_json::to_string_pretty(&self).map_err(Into::into)
     }
 
     //[pyfunction]
-    pub fn to_toml(self: &Self) -> Result<String> {
+    pub fn to_toml(&self) -> Result<String> {
         toml::to_string_pretty(&self).map_err(Into::into)
     }
 
@@ -129,14 +129,13 @@ impl Meta {
     pub fn find_errors(&self) -> Vec<(String, String)> {
         let mut errors = vec![];
         if let Some(water) = &self.water {
-            if let Some(density) = water.density {
-                if density.is_nan() {
+            if let Some(density) = water.density
+                && density.is_nan() {
                     errors.push((
                         "water.density".to_string(),
                         "cannot be NaN".to_string(),
                     ));
                 }
-            }
             if !water.is_present {
                 if water.model.is_some() {
                     errors.push((
@@ -173,7 +172,7 @@ impl Meta {
 
         if let Some(papers) = &self.papers {
             let new_papers: Vec<_> = papers
-                .into_iter()
+                .iter()
                 .map(|paper| {
                     let volume = if let Numlike::TomlVal(val) = &paper.volume {
                         match val {
@@ -188,15 +187,15 @@ impl Meta {
 
                     let number = paper.number.clone().map(|val| {
                         if let Numlike::TomlVal(n) = val {
-                            let new_number = match n {
+                            
+                            match n {
                                 TomlValue::String(v) => Numlike::Stringy(v.to_string()),
                                 TomlValue::Integer(v) => {
                                     Numlike::Stringy(v.to_string())
                                 }
                                 TomlValue::Float(v) => Numlike::Stringy(v.to_string()),
                                 _ => Numlike::Stringy("".to_string()),
-                            };
-                            new_number
+                            }
                         } else {
                             val.clone()
                         }
@@ -215,7 +214,7 @@ impl Meta {
         // Older versions of the TOML had separate fields for PDB/Uniprot
         if let Some(proteins) = &self.proteins {
             let new_proteins: Vec<_> = proteins
-                .into_iter()
+                .iter()
                 .map(|protein| {
                     if let Some(pdb_id) = &protein.pdb_id {
                         Protein {
