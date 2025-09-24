@@ -3,7 +3,7 @@ short_description = "Adaptive sampling of AncFT luciferase"
 description = "Adaptive sampling of AncFT luciferase performed in HTMD, using a C-alpha RMSD metric. 5 microseconds in total. 10 epochs of 10 parallel simulations each."
 external_link = "http://external.link"
 lead_contributor_orcid = "0000-0000-0000-000X"
-date = "2000-01-01"
+date = "Feb 5, 2000"
 commands = "gmx_mpi mdrun -s fname.tpr -deffnm fname -v -c fname.pdb -cpi fname.cpt -maxh clock_time -noappend -update gpu -bonded gpu -pme gpu -pmefft gpu -nb gpu"
 simulation_is_restricted = false
 

@@ -11,6 +11,15 @@ pub enum Datelike {
     TomlDate(toml::value::Datetime),
 }
 
+impl Datelike {
+    pub fn to_string(&self) -> String {
+        match &self {
+            Datelike::TomlDate(dt) => dt.to_string(),
+            Datelike::Stringy(val) => val.clone(),
+        }
+    }
+}
+
 #[derive(Debug, Deserialize, Serialize, Clone)]
 #[serde(untagged)]
 pub enum Numlike {
@@ -76,14 +85,14 @@ impl Meta {
     //[pyfunction]
     pub fn from_toml(toml: &str) -> Result<Self> {
         let mut meta: Meta = toml::from_str(toml)?;
-        meta.fix();
+        meta.fix()?;
         Ok(meta)
     }
 
     //[pyfunction]
     pub fn from_json(json: &str) -> Result<Self> {
         let mut meta: Meta = serde_json::from_str(json)?;
-        meta.fix();
+        meta.fix()?;
         Ok(meta)
     }
 
@@ -226,12 +235,12 @@ impl Meta {
         errors
     }
 
-    fn fix(&mut self) {
+    fn fix(&mut self) -> Result<()> {
         // Some confusion over dates as quoted strings or unquoted TOML values
         // But there's no JSON "date" format
-        if let Datelike::TomlDate(dt) = self.initial.date {
-            self.initial.date = Datelike::Stringy(dt.to_string())
-        }
+        let date = self.initial.date.to_string();
+        let dt = dateparser::parse_with_timezone(&date, &chrono::offset::Utc)?;
+        self.initial.date = Datelike::Stringy(format!("{}", dt.format("%F")));
 
         if let Some(papers) = &self.papers {
             let new_papers: Vec<_> = papers
@@ -305,6 +314,7 @@ impl Meta {
 
             self.proteins = Some(new_proteins);
         }
+        Ok(())
     }
 
     pub fn example() -> Meta {
@@ -485,7 +495,10 @@ pub struct Initial {
 #[serde(deny_unknown_fields)]
 pub struct AdditionalFile {
     pub additional_file_type: String,
+
     pub additional_file_name: String,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
 }
 
@@ -567,6 +580,7 @@ pub struct Temperature {
 #[serde(deny_unknown_fields)]
 pub struct Ligand {
     pub name: String,
+
     pub smiles: String,
 }
 
@@ -574,7 +588,9 @@ pub struct Ligand {
 #[serde(deny_unknown_fields)]
 pub struct RequiredFile {
     pub trajectory_file_name: String,
+
     pub structure_file_name: String,
+
     pub topology_file_name: String,
 }
 
@@ -617,7 +633,10 @@ pub struct Protein {
 #[serde(deny_unknown_fields)]
 pub struct Solvent {
     pub name: String,
+
     pub ion_concentration: f64,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub concentration_units: Option<String>,
 }
 

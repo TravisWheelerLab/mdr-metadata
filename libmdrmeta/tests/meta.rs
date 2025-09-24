@@ -3,16 +3,17 @@ use libmdrmeta::{Datelike, Ligand, Meta, Protein};
 use pretty_assertions::assert_eq;
 use std::fs;
 
-const EMPTY: &str = "../tests/inputs/empty";
-const EMPTY_TOML: &str = "../tests/inputs/empty.toml";
-const EMPTY_JSON: &str = "../tests/inputs/empty.json";
-const BAD_TOML: &str = "../tests/inputs/bad.toml";
 const BAD_JSON: &str = "../tests/inputs/bad.json";
-const MDR0002_TOML: &str = "../tests/inputs/MDR_00000002.toml";
+const BAD_TOML: &str = "../tests/inputs/bad.toml";
+const EMPTY: &str = "../tests/inputs/empty";
+const EMPTY_JSON: &str = "../tests/inputs/empty.json";
+const EMPTY_TOML: &str = "../tests/inputs/empty.toml";
+const FULL_EXAMPLE: &str = "../tests/inputs/example.toml";
 const MDR0002_JSON: &str = "../tests/inputs/MDR_00000002.json";
+const MDR0002_TOML: &str = "../tests/inputs/MDR_00000002.toml";
 const MDR4423_TOML: &str = "../tests/inputs/MDR_00004423.toml";
-const OUTPUT_MDR0002_TOML: &str = "../tests/outputs/MDR_00000002.toml";
 const OUTPUT_MDR0002_JSON: &str = "../tests/outputs/MDR_00000002.json";
+const OUTPUT_MDR0002_TOML: &str = "../tests/outputs/MDR_00000002.toml";
 
 // --------------------------------------------------
 #[test]
@@ -98,7 +99,7 @@ fn from_toml() -> Result<()> {
 #[test]
 fn from_str_toml() -> Result<()> {
     let contents = fs::read_to_string(MDR0002_TOML)?;
-    let res = Meta::from_str(&contents);
+    let res = Meta::from_string(&contents);
     assert!(res.is_ok());
 
     let meta = res.unwrap();
@@ -111,7 +112,7 @@ fn from_str_toml() -> Result<()> {
 #[test]
 fn from_str_json() -> Result<()> {
     let contents = fs::read_to_string(MDR0002_JSON)?;
-    let res = Meta::from_str(&contents);
+    let res = Meta::from_string(&contents);
     assert!(res.is_ok());
 
     let meta = res.unwrap();
@@ -204,8 +205,7 @@ fn parses_0002() -> Result<()> {
 #[test]
 fn parses_4423() -> Result<()> {
     let toml = fs::read_to_string(MDR4423_TOML)?;
-    let mut meta: Meta = toml::from_str(&toml)?;
-    meta.fix();
+    let meta: Meta = toml::from_str(&toml)?;
 
     assert_eq!(
         meta.initial.date,
@@ -291,6 +291,44 @@ fn parses_4423() -> Result<()> {
     assert!(meta.additional_files.is_some());
     let additional_files = meta.additional_files.unwrap();
     assert_eq!(additional_files.len(), 9);
+
+    Ok(())
+}
+
+// --------------------------------------------------
+#[test]
+fn parses_full_example() -> Result<()> {
+    let meta = Meta::from_file(FULL_EXAMPLE)?;
+
+    assert_eq!(meta.initial.date.to_string(), "2000-02-05");
+
+    if let Some(papers) = &meta.papers {
+        assert_eq!(papers.len(), 2);
+    }
+
+    if let Some(contributors) = &meta.contributors {
+        assert_eq!(contributors.len(), 2);
+    }
+
+    if let Some(files) = &meta.additional_files {
+        assert_eq!(files.len(), 2);
+    }
+
+    if let Some(ligands) = &meta.ligands {
+        assert_eq!(ligands.len(), 2);
+    }
+
+    if let Some(solvents) = &meta.solvents {
+        assert_eq!(solvents.len(), 2);
+    }
+
+    if let Some(proteins) = &meta.proteins {
+        assert_eq!(proteins.len(), 2);
+    }
+
+    if let Some(perms) = &meta.simulation_permissions {
+        assert_eq!(perms.len(), 2);
+    }
 
     Ok(())
 }
