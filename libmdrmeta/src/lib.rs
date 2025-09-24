@@ -1,4 +1,4 @@
-use anyhow::{bail, Result};
+use anyhow::{anyhow, bail, Result};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::{fs, path::Path};
@@ -85,14 +85,14 @@ impl Meta {
     //[pyfunction]
     pub fn from_toml(toml: &str) -> Result<Self> {
         let mut meta: Meta = toml::from_str(toml)?;
-        meta.fix()?;
+        meta.to_canon()?;
         Ok(meta)
     }
 
     //[pyfunction]
     pub fn from_json(json: &str) -> Result<Self> {
         let mut meta: Meta = serde_json::from_str(json)?;
-        meta.fix()?;
+        meta.to_canon()?;
         Ok(meta)
     }
 
@@ -200,10 +200,10 @@ impl Meta {
 
         if let Some(water) = &self.water {
             if let Some(density) = water.density {
-                if density.is_nan() {
+                if !density.is_finite() {
                     errors.push((
                         "water.density".to_string(),
-                        "cannot be NaN".to_string(),
+                        format!("{density} is not a finite value"),
                     ));
                 }
             }
@@ -232,15 +232,71 @@ impl Meta {
                 }
             }
         }
+
+        if let Some(solvents) = &self.solvents {
+            for solvent in solvents {
+                if !solvent.ion_concentration.is_finite() {
+                    errors.push((
+                        "solvent.ion_concentration".to_string(),
+                        format!(
+                            "{:?} is not a finite value",
+                            solvent.ion_concentration
+                        ),
+                    ));
+                }
+            }
+        }
+
+        if let Some(timestep) = &self.timestep_information {
+            if timestep
+                .integration_time_step
+                .map_or(false, |val| !val.is_finite())
+            {
+                errors.push((
+                    "timestep.integration_time_step".to_string(),
+                    format!(
+                        "{:?} is not a finite value",
+                        timestep.integration_time_step.unwrap()
+                    ),
+                ));
+            }
+        }
+
         errors
     }
 
-    fn fix(&mut self) -> Result<()> {
+    fn to_canon(&mut self) -> Result<()> {
         // Some confusion over dates as quoted strings or unquoted TOML values
         // But there's no JSON "date" format
         let date = self.initial.date.to_string();
-        let dt = dateparser::parse_with_timezone(&date, &chrono::offset::Utc)?;
+        let dt = dateparser::parse_with_timezone(&date, &chrono::offset::Utc)
+            .map_err(|e| anyhow!(r#"initial.date {e}"#))?;
         self.initial.date = Datelike::Stringy(format!("{}", dt.format("%F")));
+
+        // TODO: This is silly, but I'll have to do the same for the "solvents"?
+        if let Some(initial_ligands) = &self.initial.ligands {
+            if let Some(ligands) = &mut self.ligands {
+                for ligand_name in initial_ligands {
+                    ligands.push(Ligand {
+                        primary: None,
+                        name: ligand_name.clone(),
+                        smiles: "".to_string(),
+                    });
+                }
+            } else {
+                self.ligands = Some(
+                    initial_ligands
+                        .iter()
+                        .map(|ligand_name| Ligand {
+                            primary: None,
+                            name: ligand_name.clone(),
+                            smiles: "".to_string(),
+                        })
+                        .collect(),
+                );
+            }
+        }
+        self.initial.ligands = None;
 
         if let Some(papers) = &self.papers {
             let new_papers: Vec<_> = papers
@@ -289,6 +345,7 @@ impl Meta {
                 .map(|protein| {
                     if let Some(pdb_id) = &protein.pdb_id {
                         Protein {
+                            primary: None,
                             molecule_id_type: Some("PDB".to_string()),
                             molecule_id: Some(pdb_id.to_string()),
                             pdb_id: None,
@@ -296,6 +353,7 @@ impl Meta {
                         }
                     } else if let Some(uniprot_id) = &protein.uniprot_id {
                         Protein {
+                            primary: None,
                             molecule_id_type: Some("Uniprot".to_string()),
                             molecule_id: Some(uniprot_id.to_string()),
                             pdb_id: None,
@@ -303,6 +361,7 @@ impl Meta {
                         }
                     } else {
                         Protein {
+                            primary: None,
                             molecule_id_type: protein.molecule_id_type.clone(),
                             molecule_id: protein.molecule_id.clone(),
                             pdb_id: None,
@@ -317,6 +376,7 @@ impl Meta {
         Ok(())
     }
 
+    // Create an example with every field with valid values
     pub fn example() -> Meta {
         Meta {
             initial: Initial {
@@ -330,7 +390,10 @@ impl Meta {
                 commands: Some("gmx_mpi mdrun -s fname.tpr -deffnm fname -v -c fname.pdb \
                     -cpi fname.cpt -maxh clock_time -noappend -update gpu -bonded gpu \
                     -pme gpu -pmefft gpu -nb gpu".to_string()),
-                simulation_is_restricted: Some(false)
+                simulation_is_restricted: Some(false),
+                scientific_goal: None,
+                ligands: None,
+                solvents: None,
             },
             required_files: Some(
                 RequiredFile {
@@ -342,12 +405,12 @@ impl Meta {
                 AdditionalFile {
                     additional_file_type: "Checkpoint".to_string(),
                     additional_file_name: "abc.cpt".to_string(),
-                    description: Some("Last GROMACS checkpoint of the simulation".to_string()),
+                    additional_file_description: Some("Last GROMACS checkpoint of the simulation".to_string()),
                 },
                 AdditionalFile {
                     additional_file_type: "Miscellaneous".to_string(),
                     additional_file_name: "xyz.tpr".to_string(),
-                    description: None,
+                    additional_file_description: None,
                 }
             ]),
             contributors: Some(vec![
@@ -372,10 +435,12 @@ impl Meta {
             ),
             ligands: Some(vec![
                 Ligand {
+                    primary: None,
                     name: "Foropafant".to_string(),
                     smiles: "CC(C)C1=CC(=C(C(=C1)C(C)C)C2=CSC(=N2)N(CCN(C)C)CC3=CN=CC=C3)C(C)C".to_string(),
                 },
                 Ligand {
+                    primary: None,
                     name: "Vipadenant".to_string(),
                     smiles: "CC1=C(C=CC(=C1)CN2C3=NC(=NC(=C3N=N2)C4=CC=CO4)N)N".to_string(),
                 }
@@ -383,6 +448,7 @@ impl Meta {
             mdrepo_id: None,
             papers: Some(vec![
                 Paper {
+                    primary: Some(true),
                     title: "GPCRmd uncovers the dynamics of the 3D-GPCRome".to_string(),
                     authors: "Rodríguez, I., Fontanals, M., Tielmann, J.S. et al.".to_string(),
                     journal: "Nat Methods".to_string(),
@@ -393,7 +459,9 @@ impl Meta {
                     doi: Some("10.1038/x41594-020-0884-y".to_string())
                 },
                 Paper {
-                    title: "Adrenaline-activated structure of β2-adrenoceptor stabilized by an engineered nanobody".to_string(),
+                    primary: None,
+                    title: "Adrenaline-activated structure of β2-adrenoceptor \
+                        stabilized by an engineered nanobody".to_string(),
                     authors: "Ring, A., Manglik, A., Kruse, A., Enos, M., Weis, W., Garcia, K., Kobilka, B.".to_string(),
                     journal: "Nature".to_string(),
                     volume: Numlike::Stringy("502".to_string()),
@@ -405,12 +473,14 @@ impl Meta {
             ]),
             proteins: Some(vec![
                 Protein {
+                    primary: None,
                     molecule_id_type: Some("PDB".to_string()),
                     molecule_id: Some("7QXR".to_string()),
                     pdb_id: None,
                     uniprot_id: None,
                 },
                 Protein {
+                    primary: None,
                     molecule_id_type: Some("Uniprot".to_string()),
                     molecule_id: Some("A7M120".to_string()),
                     pdb_id: None,
@@ -446,12 +516,12 @@ impl Meta {
                 Solvent {
                     name: "Sodium".to_string(),
                     ion_concentration: 0.157,
-                    concentration_units: Some("mol/L".to_string()),
+                    solvent_concentration_units: Some("mol/L".to_string()),
                 },
                 Solvent {
                     name: "Chloride".to_string(),
                     ion_concentration: 0.225,
-                    concentration_units: Some("mol/L".to_string()),
+                    solvent_concentration_units: Some("mol/L".to_string()),
                 }
             ]),
             temperature: Some(Temperature { temperature: Some(273) }),
@@ -489,6 +559,17 @@ pub struct Initial {
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub simulation_is_restricted: Option<bool>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub scientific_goal: Option<String>,
+
+    // TODO: Remove?
+    // These are only here because people put them in the wrong place
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ligands: Option<Vec<String>>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub solvents: Option<Vec<String>>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -499,7 +580,7 @@ pub struct AdditionalFile {
     pub additional_file_name: String,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub description: Option<String>,
+    pub additional_file_description: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -531,25 +612,32 @@ pub struct Forcefield {
 #[serde(deny_unknown_fields)]
 pub struct Permission {
     pub user_orcid: String,
+
     pub can_edit: bool,
+
     pub can_view: bool,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct Protonation {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub protonation_method: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct Timestep {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub integration_time_step: Option<f64>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Paper {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub primary: Option<bool>,
+
     pub title: String,
 
     pub authors: String,
@@ -573,12 +661,16 @@ pub struct Paper {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct Temperature {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub temperature: Option<u32>,
 }
 
-#[derive(Debug, Deserialize, Serialize, PartialEq)]
+#[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Ligand {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub primary: Option<bool>,
+
     pub name: String,
 
     pub smiles: String,
@@ -617,6 +709,9 @@ pub struct Replicates {
 #[serde(deny_unknown_fields)]
 pub struct Protein {
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub primary: Option<bool>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub molecule_id_type: Option<String>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -625,7 +720,7 @@ pub struct Protein {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub pdb_id: Option<String>,
 
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none", alias = "uniprot")]
     pub uniprot_id: Option<String>,
 }
 
@@ -637,7 +732,7 @@ pub struct Solvent {
     pub ion_concentration: f64,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub concentration_units: Option<String>,
+    pub solvent_concentration_units: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

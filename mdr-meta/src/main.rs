@@ -1,4 +1,4 @@
-use anyhow::{bail, Result};
+use anyhow::{anyhow, Result};
 use clap::{builder::PossibleValue, Parser, ValueEnum};
 use libmdrmeta::Meta;
 use multimap::MultiMap;
@@ -127,44 +127,47 @@ fn run(args: Cli) -> Result<()> {
         }
         Some(Command::ToJson(args)) => {
             let mut out_file = open_outfile(&args.outfile)?;
-            let meta = Meta::from_file(&args.filename)?;
+            let meta = parse_file(&args.filename)?;
             write!(out_file, "{}", meta.to_json()?)?;
         }
         Some(Command::ToToml(args)) => {
             let mut out_file = open_outfile(&args.outfile)?;
-            let meta = Meta::from_file(&args.filename)?;
+            let meta = parse_file(&args.filename)?;
             write!(out_file, "{}", meta.to_toml()?)?;
         }
-        Some(Command::Check(args)) => match Meta::from_file(&args.filename) {
-            Ok(meta) => {
-                let errors = meta.find_errors();
-                if errors.is_empty() {
-                    println!("No errors");
-                } else if args.json {
-                    let mut json_errors = MultiMap::new();
-                    for (field, msg) in &errors {
-                        json_errors.insert(field, msg)
-                    }
-                    println!("{}", serde_json::to_string_pretty(&json_errors).unwrap())
-                } else {
-                    let num_errors = errors.len();
-                    println!(
-                        "Found {num_errors} error{}:\n{}",
-                        if num_errors == 1 { "" } else { "s" },
-                        errors
-                            .iter()
-                            .map(|(fld, msg)| format!("{fld}: {msg}"))
-                            .collect::<Vec<String>>()
-                            .join("\n")
-                    );
+        Some(Command::Check(args)) => {
+            let meta = parse_file(&args.filename)?;
+            let errors = meta.find_errors();
+            if errors.is_empty() {
+                println!("No errors");
+            } else if args.json {
+                let mut json_errors = MultiMap::new();
+                for (field, msg) in &errors {
+                    json_errors.insert(field, msg)
                 }
+                println!("{}", serde_json::to_string_pretty(&json_errors).unwrap())
+            } else {
+                let num_errors = errors.len();
+                println!(
+                    "Found {num_errors} error{}:\n{}",
+                    if num_errors == 1 { "" } else { "s" },
+                    errors
+                        .iter()
+                        .map(|(fld, msg)| format!("{fld}: {msg}"))
+                        .collect::<Vec<String>>()
+                        .join("\n")
+                );
             }
-            Err(e) => bail!(r#"Failed to parse "{}": {e}"#, args.filename),
-        },
+        }
         _ => unreachable!(),
     };
 
     Ok(())
+}
+
+// --------------------------------------------------
+fn parse_file(filename: &str) -> Result<Meta> {
+    Meta::from_file(filename).map_err(|e| anyhow!("{filename}: {e}"))
 }
 
 // --------------------------------------------------

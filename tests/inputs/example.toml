@@ -19,7 +19,7 @@ topology_file_name = "topology.psf"
 [[additional_files]]
 additional_file_type = "Checkpoint"
 additional_file_name = "abc.cpt"
-description = "Last GROMACS checkpoint of the simulation"
+additional_file_description = "Last GROMACS checkpoint of the simulation"
 
 [[additional_files]]
 additional_file_type = "Miscellaneous"
@@ -53,12 +53,12 @@ smiles = "CC1=C(C=CC(=C1)CN2C3=NC(=NC(=C3N=N2)C4=CC=CO4)N)N"
 [[solvents]]
 name = "Sodium"
 ion_concentration = 0.157
-concentration_units = "mol/L"
+solvent_concentration_units = "mol/L"
 
 [[solvents]]
 name = "Chloride"
 ion_concentration = 0.225
-concentration_units = "mol/L"
+solvent_concentration_units = "mol/L"
 
 [forcefield]
 forcefield = "Amber99SB-ILDN"

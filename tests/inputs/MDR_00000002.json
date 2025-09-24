@@ -1,5 +1,4 @@
 {
-  "mdrepo_id": null,
   "initial": {
     "description": "Rhodopsin (apoform). Classical unbiased (NVT ensemble) sodium allosteric binding assay. 3 replicates accumulate to 1.5 µs of trajectory. The time step is 4.0 fs and the saving frequency is 0.2 ns.",
     "external_link": "https://www.gpcrmd.org/dynadb/dynamics/id/12",
@@ -24,6 +23,7 @@
   "water": {
     "is_present": true
   },
+  "ligands": [],
   "solvents": [
     {
       "name": "Sodium",
@@ -36,13 +36,15 @@
   ],
   "papers": [
     {
+      "primary": true,
       "title": "GPCRmd uncovers the dynamics of the 3D-GPCRome",
       "authors": "Rodríguez-Espigares, I., Torrens-Fontanals, M., Tiemann, J.K.S. et al.",
       "journal": "Nat Methods",
       "volume": "17",
       "number": "1",
       "year": 2020,
-      "pages": "777–787"
+      "pages": "777–787",
+      "doi": "10.1038/s41592-020-0884-y"
     },
     {
       "title": "The Retinal Conformation and its Environment in Rhodopsin in Light of a New 2.2 Å Crystal Structure",
@@ -51,7 +53,8 @@
       "volume": "342",
       "number": "2",
       "year": 2004,
-      "pages": "571-583"
+      "pages": "571-583",
+      "doi": "10.1016/j.jmb.2004.07.044"
     }
   ],
   "contributors": [

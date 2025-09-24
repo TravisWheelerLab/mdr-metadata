@@ -3,9 +3,10 @@ short_description = "Adaptive sampling of AncFT luciferase"
 description = "Adaptive sampling of AncFT luciferase performed in HTMD, using a C-alpha RMSD metric. 5 microseconds in total. 10 epochs of 10 parallel simulations each."
 external_link = "http://external.link"
 lead_contributor_orcid = "0000-0000-0000-00X"
-date = "200-100-0"
+date = "2000-01-01"
 commands = "gmx_mpi mdrun -s fname.tpr -deffnm fname -v -c fname.pdb -cpi fname.cpt -maxh clock_time -noappend -update gpu -bonded gpu -pme gpu -pmefft gpu -nb gpu"
 simulation_is_restricted = false
+ligands = ["ABC"]
 
 [software]
 name = "GROMACS"
@@ -40,7 +41,7 @@ replicate = 1
 [water]
 is_present = false
 model = "TIP3P"
-density = 0.986
+density = nan
 
 [[ligands]]
 name = "Foropafant"
@@ -53,12 +54,12 @@ smiles = "CC1=C(C=CC(=C1)CN2C3=NC(=NC(=C3N=N2)C4=CC=CO4)N)N"
 [[solvents]]
 name = "Sodium"
 ion_concentration = 0.157
-concentration_units = "mol/L"
+solvent_concentration_units = "mol/L"
 
 [[solvents]]
 name = "Chloride"
-ion_concentration = 0.225
-concentration_units = "mol/L"
+ion_concentration = -inf
+solvent_concentration_units = "mol/L"
 
 [forcefield]
 forcefield = "Amber99SB-ILDN"
@@ -71,7 +72,7 @@ temperature = 100
 protonation_method = "PROPKA"
 
 [timestep_information]
-integration_time_step = 2.0
+integration_time_step = inf
 
 [[papers]]
 title = "GPCRmd uncovers the dynamics of the 3D-GPCRome"
