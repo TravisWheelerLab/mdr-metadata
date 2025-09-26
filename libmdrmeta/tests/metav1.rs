@@ -1,5 +1,5 @@
 use anyhow::Result;
-use libmdrmeta::{Datelike, Ligand, Meta, Protein};
+use libmdrmeta::metav1::{Datelike, Ligand, MetaV1, Protein};
 use pretty_assertions::assert_eq;
 use std::fs;
 
@@ -18,7 +18,7 @@ const OUTPUT_MDR0002_TOML: &str = "../tests/outputs/MDR_00000002.toml";
 // --------------------------------------------------
 #[test]
 fn dies_from_file_no_ext() -> Result<()> {
-    let res = Meta::from_file(EMPTY);
+    let res = MetaV1::from_file(EMPTY);
     assert!(!res.is_ok());
 
     let err = res.unwrap_err();
@@ -30,16 +30,16 @@ fn dies_from_file_no_ext() -> Result<()> {
 // --------------------------------------------------
 #[test]
 fn dies_from_file_bad() -> Result<()> {
-    let res = Meta::from_file(EMPTY_TOML);
+    let res = MetaV1::from_file(EMPTY_TOML);
     assert!(!res.is_ok());
 
-    let res = Meta::from_file(EMPTY_JSON);
+    let res = MetaV1::from_file(EMPTY_JSON);
     assert!(!res.is_ok());
 
-    let res = Meta::from_file(BAD_TOML);
+    let res = MetaV1::from_file(BAD_TOML);
     assert!(!res.is_ok());
 
-    let res = Meta::from_file(BAD_JSON);
+    let res = MetaV1::from_file(BAD_JSON);
     assert!(!res.is_ok());
 
     Ok(())
@@ -48,7 +48,7 @@ fn dies_from_file_bad() -> Result<()> {
 // --------------------------------------------------
 #[test]
 fn from_file_toml() -> Result<()> {
-    let res = Meta::from_file(MDR0002_TOML);
+    let res = MetaV1::from_file(MDR0002_TOML);
     assert!(res.is_ok());
 
     let meta = res.unwrap();
@@ -60,7 +60,7 @@ fn from_file_toml() -> Result<()> {
 // --------------------------------------------------
 #[test]
 fn from_file_json() -> Result<()> {
-    let res = Meta::from_file(MDR0002_JSON);
+    let res = MetaV1::from_file(MDR0002_JSON);
     assert!(res.is_ok());
 
     let meta = res.unwrap();
@@ -73,7 +73,7 @@ fn from_file_json() -> Result<()> {
 #[test]
 fn from_json() -> Result<()> {
     let contents = fs::read_to_string(MDR0002_JSON)?;
-    let res = Meta::from_json(&contents);
+    let res = MetaV1::from_json(&contents);
     assert!(res.is_ok());
 
     let meta = res.unwrap();
@@ -86,7 +86,7 @@ fn from_json() -> Result<()> {
 #[test]
 fn from_toml() -> Result<()> {
     let contents = fs::read_to_string(MDR0002_TOML)?;
-    let res = Meta::from_toml(&contents);
+    let res = MetaV1::from_toml(&contents);
     assert!(res.is_ok());
 
     let meta = res.unwrap();
@@ -99,7 +99,7 @@ fn from_toml() -> Result<()> {
 #[test]
 fn from_str_toml() -> Result<()> {
     let contents = fs::read_to_string(MDR0002_TOML)?;
-    let res = Meta::from_string(&contents);
+    let res = MetaV1::from_string(&contents);
     assert!(res.is_ok());
 
     let meta = res.unwrap();
@@ -112,7 +112,7 @@ fn from_str_toml() -> Result<()> {
 #[test]
 fn from_str_json() -> Result<()> {
     let contents = fs::read_to_string(MDR0002_JSON)?;
-    let res = Meta::from_string(&contents);
+    let res = MetaV1::from_string(&contents);
     assert!(res.is_ok());
 
     let meta = res.unwrap();
@@ -124,7 +124,7 @@ fn from_str_json() -> Result<()> {
 // --------------------------------------------------
 #[test]
 fn toml_to_toml() -> Result<()> {
-    let meta = Meta::from_file(MDR0002_TOML)?;
+    let meta = MetaV1::from_file(MDR0002_TOML)?;
     let expected = fs::read_to_string(OUTPUT_MDR0002_TOML)?;
     let actual = meta.to_toml()?;
     assert_eq!(actual, expected);
@@ -134,7 +134,7 @@ fn toml_to_toml() -> Result<()> {
 // --------------------------------------------------
 #[test]
 fn toml_to_json() -> Result<()> {
-    let meta = Meta::from_file(MDR0002_TOML)?;
+    let meta = MetaV1::from_file(MDR0002_TOML)?;
     let expected = fs::read_to_string(OUTPUT_MDR0002_JSON)?;
     let actual = meta.to_json()?;
     assert_eq!(actual, expected);
@@ -144,7 +144,7 @@ fn toml_to_json() -> Result<()> {
 // --------------------------------------------------
 #[test]
 fn json_to_toml() -> Result<()> {
-    let meta = Meta::from_file(MDR0002_JSON)?;
+    let meta = MetaV1::from_file(MDR0002_JSON)?;
     let expected = fs::read_to_string(OUTPUT_MDR0002_TOML)?;
     let actual = meta.to_toml()?;
     assert_eq!(actual, expected);
@@ -154,7 +154,7 @@ fn json_to_toml() -> Result<()> {
 // --------------------------------------------------
 #[test]
 fn parses_0002() -> Result<()> {
-    let meta = Meta::from_file(MDR0002_TOML)?;
+    let meta = MetaV1::from_file(MDR0002_TOML)?;
 
     assert_eq!(
         meta.initial.date,
@@ -166,11 +166,10 @@ fn parses_0002() -> Result<()> {
     assert_eq!(proteins.len(), 1);
     assert_eq!(
         proteins[0],
-        Protein {
-            molecule_id_type: Some("PDB".to_string()),
-            molecule_id: Some("1U19.A".to_string()),
-            pdb_id: None,
-            uniprot_id: None,
+        Protein::ProteinNew {
+            primary: None,
+            molecule_id_type: "PDB".to_string(),
+            molecule_id: "1U19.A".to_string(),
         }
     );
 
@@ -205,7 +204,7 @@ fn parses_0002() -> Result<()> {
 #[test]
 fn parses_4423() -> Result<()> {
     let toml = fs::read_to_string(MDR4423_TOML)?;
-    let meta: Meta = toml::from_str(&toml)?;
+    let meta: MetaV1 = toml::from_str(&toml)?;
 
     assert_eq!(
         meta.initial.date,
@@ -227,11 +226,10 @@ fn parses_4423() -> Result<()> {
     assert_eq!(proteins.len(), 1);
     assert_eq!(
         proteins[0],
-        Protein {
-            molecule_id_type: Some("PDB".to_string()),
-            molecule_id: Some("5UPE".to_string()),
-            pdb_id: None,
-            uniprot_id: None,
+        Protein::ProteinNew {
+            primary: None,
+            molecule_id_type: "PDB".to_string(),
+            molecule_id: "5UPE".to_string(),
         }
     );
 
@@ -241,6 +239,7 @@ fn parses_4423() -> Result<()> {
     assert_eq!(
         ligands[0],
         Ligand {
+            primary: None,
             name: "N-{4-[(3-phenylpropyl)carbamoyl]phenyl}-2H-isoindole-2-carboxamide"
                 .to_string(),
             smiles: "c1ccc(cc1)CCCNC(=O)c2ccc(cc2)NC(=O)n3cc4ccccc4c3".to_string()
@@ -298,7 +297,7 @@ fn parses_4423() -> Result<()> {
 // --------------------------------------------------
 #[test]
 fn parses_full_example() -> Result<()> {
-    let meta = Meta::from_file(FULL_EXAMPLE)?;
+    let meta = MetaV1::from_file(FULL_EXAMPLE)?;
 
     assert_eq!(meta.initial.date.to_string(), "2000-02-05");
 

@@ -20,7 +20,7 @@ topology_file_name = "topology.psf"
 [[additional_files]]
 additional_file_type = "Checkpoint"
 additional_file_name = "abc.cpt"
-description = "Last GROMACS checkpoint of the simulation"
+additional_file_description = "Last GROMACS checkpoint of the simulation"
 
 [[additional_files]]
 additional_file_type = "Miscellaneous"
